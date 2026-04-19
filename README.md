@@ -6,16 +6,18 @@ REST API для учёта пользователей **VLESS** на [Xray](http
 
 ## Quick install (prepare only)
 
-Скрипт **`scripts/install.sh`** рассчитан **только на Ubuntu 24.x / 25.x** (сервер): ставит через `apt` зависимости и при необходимости **Docker** (`get.docker.com`), затем клонирует репозиторий и готовит `.env` / `config.json`.
+Репозиторий: [github.com/durn3v/fast-panel](https://github.com/durn3v/fast-panel).
+
+Скрипт **`scripts/install.sh`** рассчитан **только на Ubuntu 24.x / 25.x** (сервер): ставит через `apt` зависимости и при необходимости **Docker** (`get.docker.com`), затем клонирует репозиторий и готовит `.env` / `config.json`. Каталог по умолчанию: **`/opt/fast-panel`** (переопределение: переменная **`INSTALL_DIR`**).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOU/super-vpn-panel/main/scripts/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/durn3v/fast-panel/main/scripts/install.sh | sudo bash
 ```
 
 Дальше: правьте `config/xray/config.json` и `.env`, затем:
 
 ```bash
-sudo /opt/super-vpn-panel/scripts/vpn-panel start
+sudo /opt/fast-panel/scripts/vpn-panel start
 ```
 
 ## Порты Xray на хосте
@@ -45,7 +47,7 @@ export COMPOSE_FILE=docker-compose.yml:docker-compose.xray-ports.gen.yml
 
 | Command | Description |
 |--------|-------------|
-| `scripts/vpn-panel start` | генерирует порты из `.env`, затем `docker compose up -d` |
+| `scripts/vpn-panel start` | генерирует `docker-compose.xray-ports.gen.yml` из `config/xray/config.json`, затем `docker compose up -d` |
 | `scripts/vpn-panel stop` | `docker compose down` |
 | `scripts/vpn-panel restart` | `docker compose restart` |
 | `scripts/vpn-panel update` | `git pull` и пересборка |

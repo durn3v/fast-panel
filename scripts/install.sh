@@ -2,8 +2,8 @@
 # Установка панели: только Ubuntu 24.04+ / 25.x (server).
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/YOU/super-vpn-panel.git}"
-INSTALL_DIR="${INSTALL_DIR:-/opt/super-vpn-panel}"
+REPO_URL="${REPO_URL:-https://github.com/durn3v/fast-panel.git}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/fast-panel}"
 BRANCH="${BRANCH:-main}"
 
 if [[ "${EUID:-0}" -ne 0 ]]; then
