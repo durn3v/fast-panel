@@ -74,6 +74,8 @@ sudo env BRANCH=имя_ветки /opt/fast-panel/scripts/vpn-panel update
 
 Свои долгоживущие правки в коде репозитория на сервере **`update` перезапишет** — храните их в форках/ветках на GitHub или вне каталога **`/opt/fast-panel`**.
 
+Если **`Permission denied`** при запуске **`/opt/fast-panel/scripts/vpn-panel`**, один раз выполните **`chmod +x`** на скрипты или вызывайте через **`bash`**: `bash /opt/fast-panel/scripts/vpn-panel update`. В репозитории скрипты помечены как исполняемые в Git (**`100755`**); после **`update`** скрипт сам выставляет **`+x`**.
+
 ## API
 
 - Auth: заголовок `X-API-Key` (как `API_KEY` в `.env`).

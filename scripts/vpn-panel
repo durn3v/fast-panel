@@ -7,6 +7,12 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# После «git reset --hard» Git может восстановить режим 100644 — без +x будет Permission denied.
+ensure_exec_bits() {
+  chmod +x "$ROOT/scripts/vpn-panel" "$ROOT/scripts/run-gen-xray-ports.sh" 2>/dev/null || true
+}
+ensure_exec_bits
+
 export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.xray-ports.gen.yml}"
 
 # Сначала отдельная команда «docker-compose» (часто так на VPS с docker.io).
@@ -45,6 +51,7 @@ sync_repo_from_origin() {
     exit 1
   fi
   git reset --hard "origin/$branch"
+  ensure_exec_bits
 }
 
 cmd="${1:-}"
