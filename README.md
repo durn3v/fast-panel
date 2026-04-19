@@ -6,6 +6,8 @@ REST API для учёта пользователей **VLESS** на [Xray](http
 
 ## Quick install (prepare only)
 
+Скрипт **`scripts/install.sh`** рассчитан **только на Ubuntu 24.x / 25.x** (сервер): ставит через `apt` зависимости и при необходимости **Docker** (`get.docker.com`), затем клонирует репозиторий и готовит `.env` / `config.json`.
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/YOU/super-vpn-panel/main/scripts/install.sh | sudo bash
 ```
@@ -20,7 +22,9 @@ sudo /opt/super-vpn-panel/scripts/vpn-panel start
 
 Порты для `docker compose` берутся **автоматически** из `inbounds[].port` в **`config/xray/config.json`** (тот же формат, что у Xray: число, строка `"443,8443"`, диапазон `"1000-1010"`). Секция **`api`** не публикуется наружу — только клиентские inbounds. Протокол **`tun`** и Unix-socket в **`listen`** пропускаются.
 
-Скрипт `scripts/gen-xray-ports-compose.mjs` (из `npm run gen:xray-ports`, `postinstall` и `scripts/vpn-panel`) перезаписывает **`docker-compose.xray-ports.gen.yml`**. Если файла конфига нет или в inbounds нет TCP-портов, в compose подставляется **443** с предупреждением в лог.
+Скрипт `scripts/gen-xray-ports-compose.mjs` вызывается обёрткой **`scripts/run-gen-xray-ports.sh`**: на сервере **`vpn-panel`** и **`npm run gen:xray-ports`** запускают его в ephemeral-контейнере **`node:22-bookworm-slim`** (нужен только Docker, не Node на хосте). Локально, без Docker, используется **`node`** на PATH. Результат — **`docker-compose.xray-ports.gen.yml`**. Если файла конфига нет или в inbounds нет TCP-портов, в compose подставляется **443** с предупреждением в лог.
+
+Образ для генерации можно переопределить: **`GEN_NODE_IMAGE`** (переменная окружения).
 
 Необязательно в `.env`: **`XRAY_CONFIG_PATH`** — путь к JSON от корня репо (по умолчанию `config/xray/config.json`).
 

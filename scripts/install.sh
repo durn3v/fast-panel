@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Установка панели: только Ubuntu 24.04+ / 25.x (server).
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/YOU/super-vpn-panel.git}"
@@ -6,12 +7,55 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/super-vpn-panel}"
 BRANCH="${BRANCH:-main}"
 
 if [[ "${EUID:-0}" -ne 0 ]]; then
-  echo "Run as root: curl ... | sudo bash" >&2
+  echo "Запустите от root: curl ... | sudo bash" >&2
   exit 1
 fi
 
-if ! command -v git >/dev/null 2>&1; then
-  apt-get update -qq && apt-get install -y -qq git ca-certificates curl openssl
+if [[ ! -r /etc/os-release ]]; then
+  echo "Не найден /etc/os-release — скрипт рассчитан на Ubuntu." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source /etc/os-release
+
+if [[ "${ID:-}" != "ubuntu" ]]; then
+  echo "Этот установщик поддерживает только Ubuntu. Сейчас: ID=${ID:-?}" >&2
+  exit 1
+fi
+
+UBUNTU_MAJOR="${VERSION_ID%%.*}"
+if [[ "$UBUNTU_MAJOR" != "24" && "$UBUNTU_MAJOR" != "25" ]]; then
+  echo "Этот установщик поддерживает только Ubuntu 24.x и 25.x. Сейчас: VERSION_ID=${VERSION_ID:-?}" >&2
+  exit 1
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+
+echo "==> Ubuntu ${VERSION_ID} — ставим пакеты (git, curl, openssl, …)"
+apt-get update -qq
+apt-get install -y -qq \
+  git \
+  ca-certificates \
+  curl \
+  openssl \
+  gnupg
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "==> Docker не найден — ставим Docker Engine + Compose (официальный скрипт)"
+  curl -fsSL https://get.docker.com | sh
+fi
+
+echo "==> Включаем сервис docker"
+systemctl enable --now docker
+
+# На свежей установке сокет может подняться с задержкой
+for _ in 1 2 3 4 5; do
+  docker info >/dev/null 2>&1 && break
+  sleep 1
+done
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker установлен, но «docker info» не проходит. Проверьте: systemctl status docker" >&2
+  exit 1
 fi
 
 if [[ ! -d "$INSTALL_DIR/.git" ]]; then
@@ -24,13 +68,6 @@ else
 fi
 
 cd "$INSTALL_DIR"
-
-if command -v systemctl >/dev/null 2>&1; then
-  if ! command -v docker >/dev/null 2>&1; then
-    curl -fsSL https://get.docker.com | sh
-  fi
-  systemctl enable --now docker
-fi
 
 ENV_CREATED=0
 if [[ ! -f .env ]]; then
@@ -68,21 +105,18 @@ else
   echo ".env already exists — secrets were not regenerated."
 fi
 
-chmod +x scripts/vpn-panel 2>/dev/null || true
+chmod +x scripts/vpn-panel scripts/run-gen-xray-ports.sh 2>/dev/null || true
 
-# Сгенерировать compose с портами из config (чтобы первый ручной docker compose не без портов)
-if command -v node >/dev/null 2>&1; then
-  (cd "$INSTALL_DIR" && node scripts/gen-xray-ports-compose.mjs) || true
-fi
+echo "==> Генерация docker-compose.xray-ports.gen.yml из config/xray/config.json"
+(cd "$INSTALL_DIR" && bash scripts/run-gen-xray-ports.sh) || true
 
 PRIMARY_IP=""
-if command -v hostname >/dev/null 2>&1; then
-  PRIMARY_IP="$(hostname -I 2>/dev/null | awk '{ print $1 }' || true)"
-fi
+PRIMARY_IP="$(hostname -I 2>/dev/null | awk '{ print $1 }' || true)"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"
 echo "  Дальнейшие шаги (каталог установки: $INSTALL_DIR)"
+echo "  ОС: Ubuntu ${VERSION_ID}"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 echo "  1) Настройте Xray: inbounds, Reality, порты слушания."
@@ -113,10 +147,4 @@ echo "  Опционально — команда vpn-panel в PATH:"
 echo "        ln -sf $INSTALL_DIR/scripts/vpn-panel /usr/local/bin/vpn-panel"
 echo "        vpn-panel start"
 echo ""
-if ! command -v node >/dev/null 2>&1; then
-  echo "  Внимание: для «$INSTALL_DIR/scripts/vpn-panel» на хосте нужен Node.js (>=20),"
-  echo "  он вызывает генерацию портов. Установите node и повторите:"
-  echo "        $INSTALL_DIR/scripts/vpn-panel start"
-  echo ""
-fi
 echo "════════════════════════════════════════════════════════════════"

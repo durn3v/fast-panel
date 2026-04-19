@@ -11,8 +11,7 @@
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "fetch-protos": "node scripts/fetch-protos.mjs",
-    "gen:xray-ports": "node scripts/gen-xray-ports-compose.mjs",
-    "postinstall": "node scripts/gen-xray-ports-compose.mjs"
+    "gen:xray-ports": "bash scripts/run-gen-xray-ports.sh"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

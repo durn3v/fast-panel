@@ -7,7 +7,7 @@ cd "$ROOT"
 export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.xray-ports.gen.yml}"
 
 ensure_ports() {
-  node scripts/gen-xray-ports-compose.mjs
+  bash "$ROOT/scripts/run-gen-xray-ports.sh"
 }
 
 cmd="${1:-}"
