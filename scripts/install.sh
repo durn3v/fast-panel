@@ -58,6 +58,19 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# Пакет docker.io из Ubuntu часто без подкоманды «docker compose» — нужен v2-плагин или docker-compose.
+if ! docker compose version >/dev/null 2>&1; then
+  echo "==> Ставим Docker Compose v2 (apt), чтобы работала команда «docker compose»"
+  apt-get install -y -qq docker-compose-v2 2>/dev/null \
+    || apt-get install -y -qq docker-compose-plugin 2>/dev/null \
+    || true
+fi
+if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+  echo "Не удалось поставить Docker Compose автоматически. Выполните:" >&2
+  echo "  apt-get install -y docker-compose-v2" >&2
+  echo "или поставьте Docker заново: curl -fsSL https://get.docker.com | sh" >&2
+fi
+
 if [[ ! -d "$INSTALL_DIR/.git" ]]; then
   mkdir -p "$(dirname "$INSTALL_DIR")"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"

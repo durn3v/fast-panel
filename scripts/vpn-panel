@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Полный PATH: иначе «docker-compose» в /usr/local/bin не виден из systemd/cron.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.xray-ports.gen.yml}"
+
+# Сначала отдельная команда «docker-compose» (часто так на VPS с docker.io).
+# Иначе — подкоманда «docker compose» (плагин v2). Переопределение: DOCKER_COMPOSE_BIN=/path/to/docker-compose
+dc() {
+  if [[ -n "${DOCKER_COMPOSE_BIN:-}" ]]; then
+    "$DOCKER_COMPOSE_BIN" "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  else
+    echo "vpn-panel: не найдены «docker-compose» и «docker compose»." >&2
+    echo "  Установите: apt-get install -y docker-compose-v2" >&2
+    echo "  Или Docker: https://get.docker.com" >&2
+    echo "  Свой бинарник: export DOCKER_COMPOSE_BIN=/path/to/docker-compose" >&2
+    exit 1
+  fi
+}
 
 ensure_ports() {
   bash "$ROOT/scripts/run-gen-xray-ports.sh"
@@ -14,20 +35,20 @@ cmd="${1:-}"
 case "$cmd" in
   start)
     ensure_ports
-    docker compose up -d
+    dc up -d
     ;;
   stop)
     ensure_ports
-    docker compose down
+    dc down
     ;;
   restart)
     ensure_ports
-    docker compose restart
+    dc restart
     ;;
   update)
     git pull
     ensure_ports
-    docker compose up -d --build
+    dc up -d --build
     ;;
   *)
     echo "Usage: $0 {start|stop|restart|update}" >&2

@@ -52,6 +52,22 @@ export COMPOSE_FILE=docker-compose.yml:docker-compose.xray-ports.gen.yml
 | `scripts/vpn-panel restart` | `docker compose restart` |
 | `scripts/vpn-panel update` | `git pull` и пересборка |
 
+`vpn-panel` сначала ищет **`docker-compose`**, затем **`docker compose`**; в начале скрипта задаётся полный **`PATH`**, чтобы находился бинарник из `/usr/local/bin`. Свой путь: **`DOCKER_COMPOSE_BIN`**.
+
+## Обновление на сервере
+
+Из каталога установки (по умолчанию **`/opt/fast-panel`**) под пользователем, который может делать **`git pull`** в этом репозитории (обычно **root**, как при `install.sh`):
+
+```bash
+sudo /opt/fast-panel/scripts/vpn-panel update
+```
+
+Скрипт выполняет **`git pull`**, заново генерирует **`docker-compose.xray-ports.gen.yml`** из актуального **`config/xray/config.json`**, затем **`docker compose up -d --build`** (или **`docker-compose`**) — пересобирается образ **panel**, контейнеры поднимаются с новым кодом. Файлы **`.env`** и **`config/xray/config.json`** скрипт не трогает.
+
+Миграции БД панель применяет при старте процесса в контейнере **panel**.
+
+Если **`git pull`** ругается на локальные правки в отслеживаемых файлах — сохраните их вне репозитория или зафиксируйте в коммите, затем повторите **`update`**.
+
 ## API
 
 - Auth: заголовок `X-API-Key` (как `API_KEY` в `.env`).
