@@ -76,6 +76,16 @@ sudo env BRANCH=имя_ветки /opt/fast-panel/scripts/vpn-panel update
 
 Если **`Permission denied`** при запуске **`/opt/fast-panel/scripts/vpn-panel`**, один раз выполните **`chmod +x`** на скрипты или вызывайте через **`bash`**: `bash /opt/fast-panel/scripts/vpn-panel update`. В репозитории скрипты помечены как исполняемые в Git (**`100755`**); после **`update`** скрипт сам выставляет **`+x`**.
 
+### Полное удаление с сервера
+
+Скрипт **[scripts/uninstall.sh](scripts/uninstall.sh)** останавливает стек (**`down -v`** — удаляются тома, в том числе БД), удаляет **`/opt/fast-panel`** (или **`INSTALL_DIR`**) и при необходимости симлинк **`vpn-panel`**.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/durn3v/fast-panel/main/scripts/uninstall.sh | sudo bash
+```
+
+Без подтверждения: **`curl ... | sudo env FORCE=1 bash`**. Другой каталог: **`INSTALL_DIR=/путь curl ... | sudo bash`**.
+
 ## API
 
 - Auth: заголовок `X-API-Key` (как `API_KEY` в `.env`).
