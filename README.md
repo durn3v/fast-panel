@@ -50,23 +50,29 @@ export COMPOSE_FILE=docker-compose.yml:docker-compose.xray-ports.gen.yml
 | `scripts/vpn-panel start` | генерирует `docker-compose.xray-ports.gen.yml` из `config/xray/config.json`, затем `docker compose up -d` |
 | `scripts/vpn-panel stop` | `docker compose down` |
 | `scripts/vpn-panel restart` | `docker compose restart` |
-| `scripts/vpn-panel update` | `git pull` и пересборка |
+| `scripts/vpn-panel update` | `git fetch` + `git reset --hard origin/<ветка>` и пересборка |
 
 `vpn-panel` сначала ищет **`docker-compose`**, затем **`docker compose`**; в начале скрипта задаётся полный **`PATH`**, чтобы находился бинарник из `/usr/local/bin`. Свой путь: **`DOCKER_COMPOSE_BIN`**.
 
 ## Обновление на сервере
 
-Из каталога установки (по умолчанию **`/opt/fast-panel`**) под пользователем, который может делать **`git pull`** в этом репозитории (обычно **root**, как при `install.sh`):
+Из каталога установки (по умолчанию **`/opt/fast-panel`**) под пользователем с правами на **`git`** в этом репозитории (обычно **root**, как при `install.sh`):
 
 ```bash
 sudo /opt/fast-panel/scripts/vpn-panel update
 ```
 
-Скрипт выполняет **`git pull`**, заново генерирует **`docker-compose.xray-ports.gen.yml`** из актуального **`config/xray/config.json`**, затем **`docker compose up -d --build`** (или **`docker-compose`**) — пересобирается образ **panel**, контейнеры поднимаются с новым кодом. Файлы **`.env`** и **`config/xray/config.json`** скрипт не трогает.
+Скрипт делает **`git fetch`** и **`git reset --hard origin/<ветка>`** (ветка = текущая из `git`, либо переменная **`BRANCH`**, иначе **`main`**) — каталог кода совпадает с GitHub, локальные отличия в **отслеживаемых** файлах не мешают (как с правками **`scripts/vpn-panel`** после `chmod` или ручного редактирования). **Не затрагиваются** неотслеживаемые файлы: **`.env`**, **`config/xray/config.json`** и т.п.
 
-Миграции БД панель применяет при старте процесса в контейнере **panel**.
+Дальше — генерация **`docker-compose.xray-ports.gen.yml`** и **`docker compose up -d --build`** (или **`docker-compose`**). Миграции БД панель применяет при старте контейнера **panel**.
 
-Если **`git pull`** ругается на локальные правки в отслеживаемых файлах — сохраните их вне репозитория или зафиксируйте в коммите, затем повторите **`update`**.
+Если нужна не **`main`**, а другая ветка на remote:
+
+```bash
+sudo env BRANCH=имя_ветки /opt/fast-panel/scripts/vpn-panel update
+```
+
+Свои долгоживущие правки в коде репозитория на сервере **`update` перезапишет** — храните их в форках/ветках на GitHub или вне каталога **`/opt/fast-panel`**.
 
 ## API
 

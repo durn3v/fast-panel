@@ -31,6 +31,22 @@ ensure_ports() {
   bash "$ROOT/scripts/run-gen-xray-ports.sh"
 }
 
+# Как на типичном сервере: без «локальных» отличий от origin (chmod/правки не блокируют обновление).
+sync_repo_from_origin() {
+  local branch
+  branch="${BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)}"
+  if [[ -z "$branch" || "$branch" == "HEAD" ]]; then
+    branch=main
+  fi
+  echo "vpn-panel update: fetch + reset к origin/$branch"
+  git fetch origin "$branch" || git fetch origin
+  if ! git rev-parse --verify -q "refs/remotes/origin/$branch" >/dev/null; then
+    echo "vpn-panel update: после fetch нет ветки origin/$branch. Задайте BRANCH=… или переключитесь на ветку с remote." >&2
+    exit 1
+  fi
+  git reset --hard "origin/$branch"
+}
+
 cmd="${1:-}"
 case "$cmd" in
   start)
@@ -46,7 +62,7 @@ case "$cmd" in
     dc restart
     ;;
   update)
-    git pull
+    sync_repo_from_origin
     ensure_ports
     dc up -d --build
     ;;
