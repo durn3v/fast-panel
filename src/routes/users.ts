@@ -12,13 +12,13 @@ import {
 function parseBigIntField(
   value: number | string,
   fieldName: string
-): bigint | { error: string } {
+): { ok: true; value: bigint } | { ok: false; error: string } {
   try {
     const n = BigInt(value);
-    if (n < 0n) return { error: `${fieldName} must be non-negative` };
-    return n;
+    if (n < 0n) return { ok: false, error: `${fieldName} must be non-negative` };
+    return { ok: true, value: n };
   } catch {
-    return { error: `${fieldName} must be a valid integer` };
+    return { ok: false, error: `${fieldName} must be a valid integer` };
   }
 }
 
@@ -83,8 +83,8 @@ export async function registerUsers(
     let dataLimit: bigint | null = null;
     if (req.body.dataLimit !== undefined && req.body.dataLimit !== null) {
       const parsed = parseBigIntField(req.body.dataLimit, "dataLimit");
-      if ("error" in parsed) return reply.status(400).send({ error: parsed.error });
-      dataLimit = parsed;
+      if (!parsed.ok) return reply.status(400).send({ error: parsed.error });
+      dataLimit = parsed.value;
     }
 
     // flow only applies to vless; default to xtls-rprx-vision when not specified
@@ -165,8 +165,8 @@ export async function registerUsers(
         patch.data_limit = null;
       } else {
         const parsed = parseBigIntField(req.body.dataLimit, "dataLimit");
-        if ("error" in parsed) return reply.status(400).send({ error: parsed.error });
-        patch.data_limit = parsed;
+        if (!parsed.ok) return reply.status(400).send({ error: parsed.error });
+        patch.data_limit = parsed.value;
       }
     }
 
