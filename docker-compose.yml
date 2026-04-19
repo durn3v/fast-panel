@@ -10,9 +10,15 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - vpn-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vpn -d vpn"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   xray:
-    image: teddysun/xray:latest
+    image: teddysun/xray:24.12.18
     restart: always
     volumes:
       - ./config/xray:/etc/xray
@@ -30,13 +36,22 @@ services:
       XRAY_API_PORT: "10085"
       XRAY_PROTO_ROOT: /app/xray-core
       PORT: "3000"
+      TRAFFIC_SYNC_INTERVAL_MS: ${TRAFFIC_SYNC_INTERVAL_MS:-60000}
     ports:
       - "3000:3000"
     depends_on:
-      - postgres
-      - xray
+      postgres:
+        condition: service_healthy
+      xray:
+        condition: service_started
     networks:
       - vpn-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   pgdata:

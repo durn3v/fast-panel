@@ -17,14 +17,21 @@ export function startTrafficSync(
 async function syncOnce(clients: XrayClients): Promise<void> {
   const now = new Date();
   const allUsers = await db.listUsers();
+
   for (const u of allUsers) {
     if (!u.enabled || !u.expire_at) continue;
     if (u.expire_at <= now) {
       try {
-        await grpcRemoveUser(clients, u.inbound_tag, u.id);
+        // DB first: source of truth. Even if Xray removal fails, the user
+        // won't be re-added on restart (enabled=false).
         await db.setUserDisabled(u.id);
+        try {
+          await grpcRemoveUser(clients, u.inbound_tag, u.id);
+        } catch (e) {
+          console.error("trafficSync: grpcRemoveUser (expire) failed — user disabled in DB, will be cleaned on restart:", u.id, e);
+        }
       } catch (e) {
-        console.error("trafficSync: expire user", u.id, e);
+        console.error("trafficSync: setUserDisabled (expire) failed:", u.id, e);
       }
     }
   }
@@ -61,19 +68,23 @@ async function syncOnce(clients: XrayClients): Promise<void> {
     }
   }
 
+  // Re-fetch to get updated traffic totals after addTraffic calls above.
   const users = await db.listUsers();
   for (const u of users) {
     if (!u.enabled || u.data_limit === null) continue;
     const limit = BigInt(u.data_limit);
-    const up = BigInt(u.traffic_up);
-    const down = BigInt(u.traffic_down);
-    const total = up + down;
+    const total = BigInt(u.traffic_up) + BigInt(u.traffic_down);
     if (total < limit) continue;
     try {
-      await grpcRemoveUser(clients, u.inbound_tag, u.id);
+      // DB first: see expiry comment above.
       await db.setUserDisabled(u.id);
+      try {
+        await grpcRemoveUser(clients, u.inbound_tag, u.id);
+      } catch (e) {
+        console.error("trafficSync: grpcRemoveUser (limit) failed — user disabled in DB, will be cleaned on restart:", u.id, e);
+      }
     } catch (e) {
-      console.error("trafficSync: limit remove user", u.id, e);
+      console.error("trafficSync: setUserDisabled (limit) failed:", u.id, e);
     }
   }
 }

@@ -38,8 +38,12 @@ async function main() {
     );
   }
 
-  const app = Fastify({ logger: true });
-  await app.register(cors, { origin: true });
+  const app = Fastify({
+    logger: {
+      redact: ["req.headers['x-api-key']"],
+    },
+  });
+  await app.register(cors, { origin: false });
 
   const openapiYaml = readFileSync(join(rootDir, "docs", "openapi.yaml"), "utf8");
   const openapiObj = YAML.parse(openapiYaml);

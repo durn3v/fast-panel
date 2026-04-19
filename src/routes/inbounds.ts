@@ -16,11 +16,8 @@ export async function registerInbounds(
       const tags = await grpcListInboundTags(xray);
       return tags.map((tag) => ({ tag }));
     } catch (e) {
-      console.error(e);
-      return reply.status(502).send({
-        error: "xray ListInbounds failed",
-        detail: String(e),
-      });
+      console.error("xray ListInbounds failed:", e);
+      return reply.status(502).send({ error: "xray ListInbounds failed" });
     }
   });
 }

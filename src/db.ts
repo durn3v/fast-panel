@@ -11,6 +11,8 @@ export type UserRow = {
   name: string;
   uuid: string;
   inbound_tag: string;
+  protocol: string;
+  flow: string | null;
   enabled: boolean;
   expire_at: Date | null;
   data_limit: string | null;
@@ -45,19 +47,19 @@ export async function runMigrations(): Promise<void> {
 export async function listUsers(inboundTag?: string): Promise<UserRow[]> {
   if (inboundTag) {
     return getSql()<UserRow[]>`
-      SELECT id, name, uuid, inbound_tag, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+      SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
       FROM users WHERE inbound_tag = ${inboundTag} ORDER BY created_at DESC
     `;
   }
   return getSql()<UserRow[]>`
-    SELECT id, name, uuid, inbound_tag, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
     FROM users ORDER BY created_at DESC
   `;
 }
 
 export async function getUser(id: string): Promise<UserRow | undefined> {
   const [r] = await getSql()<UserRow[]>`
-    SELECT id, name, uuid, inbound_tag, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
     FROM users WHERE id = ${id}::uuid
   `;
   return r;
@@ -68,18 +70,22 @@ export async function insertUser(row: {
   name: string;
   uuid: string;
   inbound_tag: string;
+  protocol: string;
+  flow: string | null;
   enabled: boolean;
   expire_at: Date | null;
   data_limit: bigint | null;
 }): Promise<void> {
   const s = getSql();
   await s`
-    INSERT INTO users (id, name, uuid, inbound_tag, enabled, expire_at, data_limit)
+    INSERT INTO users (id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit)
     VALUES (
       ${row.id}::uuid,
       ${row.name},
       ${row.uuid}::uuid,
       ${row.inbound_tag},
+      ${row.protocol},
+      ${row.flow},
       ${row.enabled},
       ${row.expire_at},
       ${row.data_limit as never}
@@ -96,6 +102,7 @@ export async function updateUser(
   patch: Partial<{
     name: string;
     enabled: boolean;
+    flow: string | null;
     expire_at: Date | null;
     data_limit: bigint | null;
   }>
@@ -104,6 +111,7 @@ export async function updateUser(
   if (!u) return undefined;
   const name = patch.name ?? u.name;
   const enabled = patch.enabled ?? u.enabled;
+  const flow = patch.flow !== undefined ? patch.flow : u.flow;
   const expire_at =
     patch.expire_at === undefined ? u.expire_at : patch.expire_at;
   let dataLimitNext: bigint | null;
@@ -119,9 +127,17 @@ export async function updateUser(
     UPDATE users SET
       name = ${name},
       enabled = ${enabled},
+      flow = ${flow},
       expire_at = ${expire_at},
       data_limit = ${dataLimitNext as never}
     WHERE id = ${id}::uuid
+  `;
+  return getUser(id);
+}
+
+export async function resetTraffic(id: string): Promise<UserRow | undefined> {
+  await getSql()`
+    UPDATE users SET traffic_up = 0, traffic_down = 0 WHERE id = ${id}::uuid
   `;
   return getUser(id);
 }

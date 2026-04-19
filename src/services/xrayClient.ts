@@ -62,31 +62,78 @@ function promisifyUnary<TReq, TRes>(
   });
 }
 
-/** Tags of inbounds currently loaded in Xray (из `config.json` + gRPC, не из БД). */
+export type InboundInfo = { tag: string; protocol: string };
+
+/**
+ * Returns all inbounds currently loaded in Xray with their tag and protocol.
+ * Protocol is derived from the proxy_settings type URL, e.g.
+ * "xray.proxy.vless.ServerObject" → "vless".
+ */
+export async function grpcListInbounds(
+  clients: XrayClients
+): Promise<InboundInfo[]> {
+  const res = (await promisifyUnary(clients.handler, "listInbounds", {})) as {
+    inbounds?: { tag?: string; proxy_settings?: { type?: string } }[];
+  };
+  return (res.inbounds ?? [])
+    .filter((ib): ib is { tag: string; proxy_settings?: { type?: string } } =>
+      Boolean(ib.tag)
+    )
+    .map((ib) => ({
+      tag: ib.tag,
+      protocol: extractProtocolFromType(ib.proxy_settings?.type),
+    }));
+}
+
+/** @deprecated Use grpcListInbounds instead. */
 export async function grpcListInboundTags(
   clients: XrayClients
 ): Promise<string[]> {
-  const res = (await promisifyUnary(clients.handler, "listInbounds", {
-    isOnlyTags: true,
-  })) as { inbounds?: { tag?: string }[] };
-  return (res.inbounds ?? [])
-    .map((ib) => ib.tag)
-    .filter((t): t is string => Boolean(t));
+  return (await grpcListInbounds(clients)).map((ib) => ib.tag);
+}
+
+function extractProtocolFromType(typeUrl?: string): string {
+  if (!typeUrl) return "vless";
+  // "xray.proxy.vless.ServerObject" → "vless"
+  const m = typeUrl.match(/xray\.proxy\.(\w+)\./);
+  return m?.[1] ?? "vless";
+}
+
+function buildAccountTypedMessage(
+  root: protobuf.Root,
+  protocol: string,
+  uuid: string,
+  flow: string | null
+): protobuf.Message {
+  switch (protocol) {
+    case "vmess":
+      return encodeTypedMessage(root, "xray.proxy.vmess.Account", { id: uuid });
+
+    case "trojan":
+      return encodeTypedMessage(root, "xray.proxy.trojan.Account", {
+        password: uuid,
+      });
+
+    case "vless":
+    default:
+      return encodeTypedMessage(root, "xray.proxy.vless.Account", {
+        id: uuid,
+        flow: flow ?? "",
+        encryption: "none",
+      });
+  }
 }
 
 export async function grpcAddUser(
   clients: XrayClients,
   inboundTag: string,
   email: string,
-  vlessUuid: string,
-  flow = "xtls-rprx-vision"
+  uuid: string,
+  protocol = "vless",
+  flow: string | null = "xtls-rprx-vision"
 ): Promise<void> {
   const root = clients.root;
-  const accountTm = encodeTypedMessage(root, "xray.proxy.vless.Account", {
-    id: vlessUuid,
-    flow,
-    encryption: "none",
-  });
+  const accountTm = buildAccountTypedMessage(root, protocol, uuid, flow);
 
   const User = root.lookupType("xray.common.protocol.User");
   const userMsg = User.create({

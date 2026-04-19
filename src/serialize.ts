@@ -8,6 +8,8 @@ export function userToApi(u: UserRow) {
     name: u.name,
     uuid: u.uuid,
     inboundTag: u.inbound_tag,
+    protocol: u.protocol,
+    flow: u.protocol === "vless" ? (u.flow ?? "") : null,
     enabled: u.enabled,
     expireAt: u.expire_at ? u.expire_at.toISOString() : null,
     dataLimit: u.data_limit === null ? null : u.data_limit.toString(),

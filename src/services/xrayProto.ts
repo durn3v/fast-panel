@@ -3,6 +3,13 @@ import { join } from "node:path";
 
 let cached: Promise<protobuf.Root> | null = null;
 
+/** Proto files for proxy account types beyond what command.proto transitively loads. */
+const PROXY_ACCOUNT_PROTOS = [
+  ["proxy", "vless", "account.proto"],
+  ["proxy", "vmess", "account.proto"],
+  ["proxy", "trojan", "config.proto"],
+];
+
 export function getProtoRoot(protoRoot: string): Promise<protobuf.Root> {
   if (!cached) {
     const root = new protobuf.Root();
@@ -15,6 +22,13 @@ export function getProtoRoot(protoRoot: string): Promise<protobuf.Root> {
       await root.load(
         join(protoRoot, "app", "stats", "command", "command.proto")
       );
+      for (const parts of PROXY_ACCOUNT_PROTOS) {
+        try {
+          await root.load(join(protoRoot, ...parts));
+        } catch {
+          // Proto file absent — this protocol won't be usable at runtime.
+        }
+      }
       return root;
     })();
   }
