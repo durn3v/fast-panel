@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: Super VPN Panel API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+security:
+  - ApiKeyAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /openapi.yaml:
+    get:
+      security: []
+      summary: OpenAPI YAML
+      responses:
+        "200":
+          description: YAML document
+  /openapi.json:
+    get:
+      security: []
+      summary: OpenAPI JSON
+      responses:
+        "200":
+          description: OpenAPI object
+  /inbounds:
+    get:
+      summary: List inbound tags from running Xray
+      description: |
+        Inbounds задаются в `config/xray/config.json` вручную; API только читает теги через gRPC.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tag:
+                      type: string
+        "502":
+          description: Xray gRPC error
+        "503":
+          description: Xray not configured
+  /users:
+    get:
+      summary: List users
+      parameters:
+        - name: inboundTag
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create user
+      description: |
+        `inboundTag` должен совпадать с тегом inbound в уже запущенном Xray.
+        VLESS-ссылку собирайте у себя по `uuid`, `inboundTag` и настройкам из своего `config.json`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, inboundTag]
+              properties:
+                name:
+                  type: string
+                inboundTag:
+                  type: string
+                expireAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                dataLimit:
+                  type: string
+                  description: Traffic limit in bytes (stringified bigint)
+                  nullable: true
+      responses:
+        "200":
+          description: Created user
+        "400":
+          description: Validation or unknown inboundTag
+  /users/{id}:
+    get:
+      summary: Get user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+    patch:
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                enabled:
+                  type: boolean
+                expireAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                dataLimit:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted

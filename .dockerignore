@@ -1,0 +1,6 @@
+node_modules
+xray-core
+.git
+.env
+*.md
+dist

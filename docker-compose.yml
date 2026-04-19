@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: vpn
+      POSTGRES_USER: vpn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - vpn-net
+
+  xray:
+    image: teddysun/xray:latest
+    restart: always
+    volumes:
+      - ./config/xray:/etc/xray
+    # ports: см. docker-compose.xray-ports.gen.yml (генерируется из inbounds в config/xray/config.json)
+    networks:
+      - vpn-net
+
+  panel:
+    build: .
+    restart: always
+    environment:
+      API_KEY: ${API_KEY}
+      DATABASE_URL: postgres://vpn:${POSTGRES_PASSWORD}@postgres:5432/vpn
+      XRAY_API_HOST: xray
+      XRAY_API_PORT: "10085"
+      XRAY_PROTO_ROOT: /app/xray-core
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - xray
+    networks:
+      - vpn-net
+
+volumes:
+  pgdata:
+
+networks:
+  vpn-net:
+    driver: bridge

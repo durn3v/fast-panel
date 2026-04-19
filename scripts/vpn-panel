@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.xray-ports.gen.yml}"
+
+ensure_ports() {
+  node scripts/gen-xray-ports-compose.mjs
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  start)
+    ensure_ports
+    docker compose up -d
+    ;;
+  stop)
+    ensure_ports
+    docker compose down
+    ;;
+  restart)
+    ensure_ports
+    docker compose restart
+    ;;
+  update)
+    git pull
+    ensure_ports
+    docker compose up -d --build
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|update}" >&2
+    exit 1
+    ;;
+esac

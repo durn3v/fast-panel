@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+xray-core/
+.DS_Store
+*.log
