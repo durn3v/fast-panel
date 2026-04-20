@@ -4,9 +4,8 @@ export function userToApi(u: UserRow) {
   const up = BigInt(u.traffic_up);
   const down = BigInt(u.traffic_down);
   return {
-    id: u.id,
-    name: u.name,
     uuid: u.uuid,
+    name: u.name,
     inboundTag: u.inbound_tag,
     protocol: u.protocol,
     flow: u.protocol === "vless" ? (u.flow ?? "") : null,

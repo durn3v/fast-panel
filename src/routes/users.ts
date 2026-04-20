@@ -132,14 +132,14 @@ export async function registerUsers(
     return userToApi(created!);
   });
 
-  app.get<{ Params: { id: string } }>("/users/:id", async (req, reply) => {
-    const u = await db.getUser(req.params.id);
+  app.get<{ Params: { uuid: string } }>("/users/:uuid", async (req, reply) => {
+    const u = await db.getUserByUuid(req.params.uuid);
     if (!u) return reply.status(404).send({ error: "not found" });
     return userToApi(u);
   });
 
   app.patch<{
-    Params: { id: string };
+    Params: { uuid: string };
     Body: Partial<{
       name: string;
       enabled: boolean;
@@ -147,8 +147,8 @@ export async function registerUsers(
       expireAt: string | null;
       dataLimit: number | string | null;
     }>;
-  }>("/users/:id", async (req, reply) => {
-    const u = await db.getUser(req.params.id);
+  }>("/users/:uuid", async (req, reply) => {
+    const u = await db.getUserByUuid(req.params.uuid);
     if (!u) return reply.status(404).send({ error: "not found" });
     const patch: Parameters<typeof db.updateUser>[1] = {};
     if (req.body.name !== undefined) patch.name = req.body.name;
@@ -173,14 +173,8 @@ export async function registerUsers(
       }
     }
 
-    const enablingUser =
-      xray &&
-      req.body.enabled === true &&
-      u.enabled === false;
-    const disablingUser =
-      xray &&
-      req.body.enabled === false &&
-      u.enabled === true;
+    const enablingUser = xray && req.body.enabled === true && u.enabled === false;
+    const disablingUser = xray && req.body.enabled === false && u.enabled === true;
 
     if (enablingUser) {
       try {
@@ -198,14 +192,14 @@ export async function registerUsers(
       }
     }
 
-    const next = await db.updateUser(req.params.id, patch);
+    const next = await db.updateUser(u.id, patch);
     return userToApi(next!);
   });
 
-  app.delete<{ Params: { id: string } }>(
-    "/users/:id",
+  app.delete<{ Params: { uuid: string } }>(
+    "/users/:uuid",
     async (req, reply) => {
-      const u = await db.getUser(req.params.id);
+      const u = await db.getUserByUuid(req.params.uuid);
       if (!u) return reply.status(404).send({ error: "not found" });
       if (xray) {
         try {
@@ -215,17 +209,17 @@ export async function registerUsers(
           return reply.status(502).send({ error: "xray RemoveUser failed" });
         }
       }
-      await db.deleteUser(req.params.id);
+      await db.deleteUser(u.id);
       return reply.status(204).send();
     }
   );
 
-  app.post<{ Params: { id: string } }>(
-    "/users/:id/reset-traffic",
+  app.post<{ Params: { uuid: string } }>(
+    "/users/:uuid/reset-traffic",
     async (req, reply) => {
-      const u = await db.getUser(req.params.id);
+      const u = await db.getUserByUuid(req.params.uuid);
       if (!u) return reply.status(404).send({ error: "not found" });
-      const updated = await db.resetTraffic(req.params.id);
+      const updated = await db.resetTraffic(u.id);
       return userToApi(updated!);
     }
   );

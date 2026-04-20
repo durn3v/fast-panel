@@ -101,27 +101,30 @@ paths:
           description: Created user
         "400":
           description: Validation or unknown inboundTag
-  /users/{id}:
+  /users/{uuid}:
     get:
       summary: Get user
       parameters:
-        - name: id
+        - name: uuid
           in: path
           required: true
           schema:
             type: string
             format: uuid
+          description: VLESS/VMess/Trojan UUID of the user
       responses:
         "200":
           description: OK
     patch:
       summary: Update user
       parameters:
-        - name: id
+        - name: uuid
           in: path
           required: true
           schema:
             type: string
+            format: uuid
+          description: VLESS/VMess/Trojan UUID of the user
       requestBody:
         content:
           application/json:
@@ -145,11 +148,27 @@ paths:
     delete:
       summary: Delete user
       parameters:
-        - name: id
+        - name: uuid
           in: path
           required: true
           schema:
             type: string
+            format: uuid
+          description: VLESS/VMess/Trojan UUID of the user
       responses:
         "204":
           description: Deleted
+  /users/{uuid}/reset-traffic:
+    post:
+      summary: Reset user traffic counters
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: VLESS/VMess/Trojan UUID of the user
+      responses:
+        "200":
+          description: Updated user

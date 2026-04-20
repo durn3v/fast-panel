@@ -65,6 +65,14 @@ export async function getUser(id: string): Promise<UserRow | undefined> {
   return r;
 }
 
+export async function getUserByUuid(uuid: string): Promise<UserRow | undefined> {
+  const [r] = await getSql()<UserRow[]>`
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    FROM users WHERE uuid = ${uuid}::uuid
+  `;
+  return r;
+}
+
 export async function insertUser(row: {
   id: string;
   name: string;
