@@ -37,6 +37,7 @@ export async function registerUsers(
     Body: {
       name: string;
       inboundTag: string;
+      enabled?: boolean;
       protocol?: string;
       flow?: string | null;
       expireAt?: string | null;
@@ -93,7 +94,9 @@ export async function registerUsers(
         ? (req.body.flow !== undefined ? req.body.flow : "xtls-rprx-vision")
         : null;
 
-    if (xray) {
+    const enabled = req.body.enabled !== false;
+
+    if (xray && enabled) {
       try {
         await grpcAddUser(xray, inboundTag, id, userUuid, protocol, flow);
       } catch (e) {
@@ -110,12 +113,12 @@ export async function registerUsers(
         inbound_tag: inboundTag,
         protocol,
         flow,
-        enabled: true,
+        enabled,
         expire_at: expireAt,
         data_limit: dataLimit,
       });
     } catch (e) {
-      if (xray) {
+      if (xray && enabled) {
         try {
           await grpcRemoveUser(xray, inboundTag, id);
         } catch (re) {
