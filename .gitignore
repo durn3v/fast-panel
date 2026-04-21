@@ -4,3 +4,4 @@ dist/
 xray-core/
 .DS_Store
 *.log
+config/xray/config.json
