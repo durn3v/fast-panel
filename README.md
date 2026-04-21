@@ -14,6 +14,14 @@ REST API для учёта пользователей **VLESS** на [Xray](http
 curl -fsSL https://raw.githubusercontent.com/durn3v/fast-panel/main/scripts/install.sh | sudo bash
 ```
 
+При запуске скрипт спросит домен для HTTPS-сертификата. Если домен указан — автоматически выпускается сертификат Let's Encrypt через **certbot standalone** (порт 80, порт 443 не трогается) и прописывается в `.env`. Панель поднимается на порту **12983** с нативным HTTPS в Fastify.
+
+Передать домен без интерактивного запроса:
+
+```bash
+curl -fsSL .../install.sh | sudo env PANEL_DOMAIN=panel.example.com bash
+```
+
 Дальше: правьте `config/xray/config.json` и `.env`, затем:
 
 ```bash
@@ -109,6 +117,20 @@ cp .env.example .env   # DATABASE_URL, API_KEY, XRAY_PROTO_ROOT=./xray-core
 npm run dev
 ```
 
+## TLS / HTTPS
+
+Панель поддерживает нативный HTTPS без nginx/stunnel — Fastify читает сертификат при старте.
+
+| Переменная | Описание |
+|---|---|
+| `TLS_CERT` | Путь к `fullchain.pem` (например `/etc/letsencrypt/live/domain/fullchain.pem`) |
+| `TLS_KEY` | Путь к `privkey.pem` |
+| `PORT` | Порт панели, по умолчанию **12983**; 443 остаётся свободным для Xray |
+
+Если `TLS_CERT` / `TLS_KEY` не заданы — панель работает по HTTP (удобно для локальной разработки).
+
+`install.sh` выпускает сертификат через **certbot standalone** (HTTP-01 challenge на порту 80) и создаёт deploy hook `/etc/letsencrypt/renewal-hooks/deploy/restart-vpn-panel.sh`, который перезапускает контейнер `panel` после авто-обновления сертификата.
+
 ## Environment
 
-См. [.env.example](.env.example). В Docker `docker-compose.yml` подставляет `POSTGRES_PASSWORD` и `API_KEY` из `.env`.
+См. [.env.example](.env.example). В Docker `docker-compose.yml` подставляет `POSTGRES_PASSWORD`, `API_KEY`, `TLS_CERT`, `TLS_KEY` и `PORT` из `.env`.

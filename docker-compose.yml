@@ -35,10 +35,14 @@ services:
       XRAY_API_HOST: xray
       XRAY_API_PORT: "10085"
       XRAY_PROTO_ROOT: /app/xray-core
-      PORT: "3000"
+      PORT: "${PORT:-12983}"
       TRAFFIC_SYNC_INTERVAL_MS: ${TRAFFIC_SYNC_INTERVAL_MS:-60000}
+      TLS_CERT: ${TLS_CERT:-}
+      TLS_KEY: ${TLS_KEY:-}
     ports:
-      - "3000:3000"
+      - "${PORT:-12983}:${PORT:-12983}"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +51,7 @@ services:
     networks:
       - vpn-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsk https://localhost:${PORT:-12983}/health 2>/dev/null || curl -fs http://localhost:${PORT:-12983}/health"]
       interval: 15s
       timeout: 5s
       retries: 3

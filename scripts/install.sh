@@ -31,6 +31,15 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 
+# Домен для TLS-сертификата (можно передать через env: PANEL_DOMAIN=panel.example.com)
+PANEL_DOMAIN="${PANEL_DOMAIN:-}"
+PANEL_PORT="${PANEL_PORT:-12983}"
+
+if [[ -z "$PANEL_DOMAIN" && -t 0 ]]; then
+  echo ""
+  read -rp "Домен для HTTPS-сертификата панели (оставьте пустым, чтобы пропустить TLS): " PANEL_DOMAIN
+fi
+
 echo "==> Ubuntu ${VERSION_ID} — ставим пакеты (git, curl, openssl, …)"
 apt-get update -qq
 apt-get install -y -qq \
@@ -71,6 +80,42 @@ if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev
   echo "или поставьте Docker заново: curl -fsSL https://get.docker.com | sh" >&2
 fi
 
+# --- TLS: certbot standalone (порт 80, не трогает 443) ---
+TLS_CERT_VALUE=""
+TLS_KEY_VALUE=""
+
+if [[ -n "$PANEL_DOMAIN" ]]; then
+  echo "==> Ставим certbot для TLS-сертификата"
+  apt-get install -y -qq certbot
+
+  CERT_DIR="/etc/letsencrypt/live/${PANEL_DOMAIN}"
+
+  if [[ -f "${CERT_DIR}/fullchain.pem" ]]; then
+    echo "==> Сертификат для ${PANEL_DOMAIN} уже существует — пропускаем выпуск"
+  else
+    echo "==> Выпускаем сертификат для ${PANEL_DOMAIN} (certbot standalone, порт 80)"
+    certbot certonly \
+      --standalone \
+      --non-interactive \
+      --agree-tos \
+      --register-unsafely-without-email \
+      -d "$PANEL_DOMAIN"
+  fi
+
+  TLS_CERT_VALUE="${CERT_DIR}/fullchain.pem"
+  TLS_KEY_VALUE="${CERT_DIR}/privkey.pem"
+
+  # Deploy hook: перезапускаем контейнер panel после обновления сертификата
+  HOOK_FILE="/etc/letsencrypt/renewal-hooks/deploy/restart-vpn-panel.sh"
+  cat >"$HOOK_FILE" <<HOOK
+#!/bin/bash
+# Автоматически перезапускает контейнер panel после обновления сертификата
+cd "${INSTALL_DIR}" && docker compose restart panel 2>/dev/null || true
+HOOK
+  chmod +x "$HOOK_FILE"
+  echo "==> Deploy hook создан: $HOOK_FILE"
+fi
+
 if [[ ! -d "$INSTALL_DIR/.git" ]]; then
   mkdir -p "$(dirname "$INSTALL_DIR")"
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
@@ -94,9 +139,23 @@ DATABASE_URL=postgres://vpn:${PG_PASS}@postgres:5432/vpn
 XRAY_API_HOST=xray
 XRAY_API_PORT=10085
 XRAY_PROTO_ROOT=/app/xray-core
-PORT=3000
+PORT=${PANEL_PORT}
+TLS_CERT=${TLS_CERT_VALUE}
+TLS_KEY=${TLS_KEY_VALUE}
 TRAFFIC_SYNC_INTERVAL_MS=60000
 EOF
+else
+  # .env уже существует — обновляем только TLS_CERT/TLS_KEY/PORT если они пустые
+  if [[ -n "$TLS_CERT_VALUE" ]]; then
+    grep -q '^TLS_CERT=' .env \
+      && sed -i "s|^TLS_CERT=.*|TLS_CERT=${TLS_CERT_VALUE}|" .env \
+      || echo "TLS_CERT=${TLS_CERT_VALUE}" >> .env
+    grep -q '^TLS_KEY=' .env \
+      && sed -i "s|^TLS_KEY=.*|TLS_KEY=${TLS_KEY_VALUE}|" .env \
+      || echo "TLS_KEY=${TLS_KEY_VALUE}" >> .env
+  fi
+  grep -q '^PORT=' .env \
+    || echo "PORT=${PANEL_PORT}" >> .env
 fi
 
 mkdir -p config/xray
@@ -129,6 +188,9 @@ echo "==> Генерация docker-compose.xray-ports.gen.yml из config/xray/
 PRIMARY_IP=""
 PRIMARY_IP="$(hostname -I 2>/dev/null | awk '{ print $1 }' || true)"
 
+PROTO="http"
+[[ -n "$TLS_CERT_VALUE" ]] && PROTO="https"
+
 echo ""
 echo "════════════════════════════════════════════════════════════════"
 echo "  Дальнейшие шаги (каталог установки: $INSTALL_DIR)"
@@ -147,16 +209,24 @@ echo ""
 echo "  3) Запустите контейнеры:"
 echo "        vpn-panel start"
 echo ""
-echo "  4) Проверка здоровья панели (после start, порт 3000 в compose):"
-echo "        curl -sS http://127.0.0.1:3000/health"
-if [[ -n "$PRIMARY_IP" ]]; then
-  echo "     С другой машины в вашей сети (если порт 3000 доступен):"
-  echo "        curl -sS http://${PRIMARY_IP}:3000/health"
+echo "  4) Проверка здоровья панели (после start, порт ${PANEL_PORT}):"
+echo "        curl -sk ${PROTO}://127.0.0.1:${PANEL_PORT}/health"
+if [[ -n "$PANEL_DOMAIN" ]]; then
+  echo "     Снаружи (HTTPS):"
+  echo "        curl -s https://${PANEL_DOMAIN}:${PANEL_PORT}/health"
+elif [[ -n "$PRIMARY_IP" ]]; then
+  echo "     С другой машины:"
+  echo "        curl -s http://${PRIMARY_IP}:${PANEL_PORT}/health"
 fi
 echo "     OpenAPI без ключа:"
-echo "        curl -sS http://127.0.0.1:3000/openapi.yaml | head"
+echo "        curl -sk ${PROTO}://127.0.0.1:${PANEL_PORT}/openapi.yaml | head"
 echo ""
 echo "  5) Запросы к API — заголовок X-API-Key из строки API_KEY в:"
 echo "        $INSTALL_DIR/.env"
+if [[ -n "$TLS_CERT_VALUE" ]]; then
+  echo ""
+  echo "  TLS: сертификат Let's Encrypt для ${PANEL_DOMAIN}"
+  echo "       Авто-обновление: certbot.timer (systemd) + deploy hook перезапустит контейнер"
+fi
 echo ""
 echo "════════════════════════════════════════════════════════════════"

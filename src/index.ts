@@ -38,7 +38,18 @@ async function main() {
     );
   }
 
+  const tlsOptions =
+    env.tlsCert && env.tlsKey
+      ? {
+          https: {
+            cert: readFileSync(env.tlsCert),
+            key: readFileSync(env.tlsKey),
+          },
+        }
+      : {};
+
   const app = Fastify({
+    ...tlsOptions,
     logger: {
       redact: ["req.headers['x-api-key']"],
     },
