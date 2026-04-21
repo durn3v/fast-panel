@@ -92,8 +92,39 @@ case "$cmd" in
     ensure_ports
     dc up -d --build
     ;;
+  xray-status)
+    dc ps xray
+    ;;
+  xray-logs)
+    lines="${2:-100}"
+    if ! [[ "$lines" =~ ^[0-9]+$ ]] || [[ "$lines" -lt 1 ]]; then
+      echo "vpn-panel xray-logs: второй аргумент — число строк (tail), например: vpn-panel xray-logs 200" >&2
+      exit 1
+    fi
+    if [[ "$lines" -gt 10000 ]]; then
+      lines=10000
+    fi
+    dc logs --tail="$lines" xray
+    ;;
+  users-stats)
+    if [[ ! -f "$ROOT/.env" ]]; then
+      echo "vpn-panel users-stats: нет $ROOT/.env" >&2
+      exit 1
+    fi
+    set -a
+    # shellcheck source=/dev/null
+    source "$ROOT/.env"
+    set +a
+    if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+      echo "vpn-panel users-stats: в .env не задан POSTGRES_PASSWORD" >&2
+      exit 1
+    fi
+    dc exec -T -e "PGPASSWORD=${POSTGRES_PASSWORD}" postgres \
+      psql -h 127.0.0.1 -U vpn -d vpn -v ON_ERROR_STOP=1 \
+      -c "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE enabled) AS enabled FROM users;"
+    ;;
   *)
-    echo "Usage: $0 {start|stop|restart|reload-xray|update}" >&2
+    echo "Usage: $0 {start|stop|restart|reload-xray|update|xray-status|xray-logs [N]|users-stats}" >&2
     exit 1
     ;;
 esac
