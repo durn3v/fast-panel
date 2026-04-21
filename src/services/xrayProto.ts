@@ -1,5 +1,5 @@
 import protobuf from "protobufjs";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 
 let cached: Promise<protobuf.Root> | null = null;
 
@@ -14,7 +14,7 @@ export function getProtoRoot(protoRoot: string): Promise<protobuf.Root> {
   if (!cached) {
     const root = new protobuf.Root();
     root.resolvePath = (_origin: string, target: string) =>
-      join(protoRoot, target);
+      isAbsolute(target) ? target : join(protoRoot, target);
     cached = (async () => {
       await root.load(
         join(protoRoot, "app", "proxyman", "command", "command.proto")
