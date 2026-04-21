@@ -18,7 +18,7 @@ services:
       start_period: 10s
 
   xray:
-    image: teddysun/xray:24.12.18
+    image: teddysun/xray:latest
     restart: always
     volumes:
       - ./config/xray:/etc/xray
