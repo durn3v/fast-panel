@@ -68,13 +68,17 @@ case "$cmd" in
     ensure_ports
     dc restart
     ;;
+  reload-xray)
+    dc restart xray
+    dc restart panel
+    ;;
   update)
     sync_repo_from_origin
     ensure_ports
     dc up -d --build
     ;;
   *)
-    echo "Usage: $0 {start|stop|restart|update}" >&2
+    echo "Usage: $0 {start|stop|restart|reload-xray|update}" >&2
     exit 1
     ;;
 esac

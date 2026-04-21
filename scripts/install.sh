@@ -120,6 +120,9 @@ fi
 
 chmod +x scripts/vpn-panel scripts/run-gen-xray-ports.sh 2>/dev/null || true
 
+echo "==> Создаём симлинк /usr/local/bin/vpn-panel"
+ln -sf "$INSTALL_DIR/scripts/vpn-panel" /usr/local/bin/vpn-panel
+
 echo "==> Генерация docker-compose.xray-ports.gen.yml из config/xray/config.json"
 (cd "$INSTALL_DIR" && bash scripts/run-gen-xray-ports.sh) || true
 
@@ -142,7 +145,7 @@ echo "  2) При необходимости отредактируйте окр
 echo "        $INSTALL_DIR/.env"
 echo ""
 echo "  3) Запустите контейнеры:"
-echo "        $INSTALL_DIR/scripts/vpn-panel start"
+echo "        vpn-panel start"
 echo ""
 echo "  4) Проверка здоровья панели (после start, порт 3000 в compose):"
 echo "        curl -sS http://127.0.0.1:3000/health"
@@ -155,9 +158,5 @@ echo "        curl -sS http://127.0.0.1:3000/openapi.yaml | head"
 echo ""
 echo "  5) Запросы к API — заголовок X-API-Key из строки API_KEY в:"
 echo "        $INSTALL_DIR/.env"
-echo ""
-echo "  Опционально — команда vpn-panel в PATH:"
-echo "        ln -sf $INSTALL_DIR/scripts/vpn-panel /usr/local/bin/vpn-panel"
-echo "        vpn-panel start"
 echo ""
 echo "════════════════════════════════════════════════════════════════"

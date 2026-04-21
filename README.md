@@ -50,6 +50,7 @@ export COMPOSE_FILE=docker-compose.yml:docker-compose.xray-ports.gen.yml
 | `scripts/vpn-panel start` | генерирует `docker-compose.xray-ports.gen.yml` из `config/xray/config.json`, затем `docker compose up -d` |
 | `scripts/vpn-panel stop` | `docker compose down` |
 | `scripts/vpn-panel restart` | `docker compose restart` |
+| `scripts/vpn-panel reload-xray` | перезапускает только Xray, затем панель (для применения изменений в `config.json`) |
 | `scripts/vpn-panel update` | `git fetch` + `git reset --hard origin/<ветка>` и пересборка |
 
 `vpn-panel` сначала ищет **`docker-compose`**, затем **`docker compose`**; в начале скрипта задаётся полный **`PATH`**, чтобы находился бинарник из `/usr/local/bin`. Свой путь: **`DOCKER_COMPOSE_BIN`**.
