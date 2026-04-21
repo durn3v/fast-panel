@@ -56,6 +56,41 @@ paths:
           description: Xray gRPC error
         "503":
           description: Xray not configured
+  /inbounds/online:
+    get:
+      summary: Online users per inbound
+      description: |
+        Считает пользователей в статусе online по данным Xray (gRPC), сопоставляя id пользователя панели
+        с инбаундом из БД. В `policy.levels` у inbound-пользователей должен быть включён `statsUserOnline`
+        (см. `config/xray/config.example.json`). Соединения без записи в панели попадают в `unmappedOnlineUsers`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [inbounds, unmappedOnlineUsers]
+                properties:
+                  unmappedOnlineUsers:
+                    type: integer
+                    description: Онлайн в Xray, но id не найден среди пользователей панели
+                  inbounds:
+                    type: array
+                    items:
+                      type: object
+                      required: [tag, protocol, onlineUsers]
+                      properties:
+                        tag:
+                          type: string
+                        protocol:
+                          type: string
+                        onlineUsers:
+                          type: integer
+        "502":
+          description: Xray gRPC error
+        "503":
+          description: Xray not configured
   /users:
     get:
       summary: List users

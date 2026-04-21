@@ -201,3 +201,35 @@ export async function grpcQueryStats(
     value: String(s.value ?? 0),
   }));
 }
+
+function isUnimplementedGrpcError(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    (e as { code: unknown }).code === grpc.status.UNIMPLEMENTED
+  );
+}
+
+/**
+ * User IDs currently considered online by Xray (same strings as gRPC "email" / panel user id).
+ * Requires policy `statsUserOnline: true` for the user level in Xray.
+ * Uses GetAllOnlineUsers when available, otherwise GetUsersStats (older cores).
+ */
+export async function grpcGetOnlineUserIds(clients: XrayClients): Promise<string[]> {
+  try {
+    const res = (await promisifyUnary(clients.stats, "getAllOnlineUsers", {})) as {
+      users?: string[];
+    };
+    return res.users ?? [];
+  } catch (e) {
+    if (!isUnimplementedGrpcError(e)) throw e;
+    const res = (await promisifyUnary(clients.stats, "getUsersStats", {
+      include_traffic: false,
+      reset: false,
+    })) as { users?: { email?: string }[] };
+    return (res.users ?? [])
+      .map((u) => u.email)
+      .filter((email): email is string => Boolean(email));
+  }
+}
