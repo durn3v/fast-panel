@@ -4,7 +4,22 @@ set -euo pipefail
 # Полный PATH: иначе «docker-compose» в /usr/local/bin не виден из systemd/cron.
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Корень репозитория: родитель каталога scripts/. При вызове через симлинк
+# (/usr/local/bin/vpn-panel) dirname "$0" даёт /usr/local/bin — без readlink
+# получится неверный ROOT и git update сломается.
+_vpn_panel_resolve_root() {
+  local src="${BASH_SOURCE[0]:-$0}"
+  local dir link
+  while [[ -h "$src" ]]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    link="$(readlink "$src")" || break
+    [[ "$link" != /* ]] && link="$dir/$link"
+    src="$link"
+  done
+  cd -P "$(dirname "$src")/.." && pwd
+}
+ROOT="$(_vpn_panel_resolve_root)"
+unset -f _vpn_panel_resolve_root
 cd "$ROOT"
 
 # После «git reset --hard» Git может восстановить режим 100644 — без +x будет Permission denied.

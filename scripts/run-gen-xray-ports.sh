@@ -3,7 +3,19 @@
 # локально при наличии только Node — fallback на node.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+_resolve_repo_root() {
+  local src="${BASH_SOURCE[0]:-$0}"
+  local dir link
+  while [[ -h "$src" ]]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    link="$(readlink "$src")" || break
+    [[ "$link" != /* ]] && link="$dir/$link"
+    src="$link"
+  done
+  cd -P "$(dirname "$src")/.." && pwd
+}
+ROOT="$(_resolve_repo_root)"
+unset -f _resolve_repo_root
 cd "$ROOT"
 
 GEN_NODE_IMAGE="${GEN_NODE_IMAGE:-node:22-bookworm-slim}"
