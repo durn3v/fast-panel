@@ -12,9 +12,13 @@ export async function restoreXrayFromDb(xray: XrayClients): Promise<void> {
     try {
       await grpcAddUser(xray, u.inbound_tag, u.id, u.uuid, u.protocol, u.flow);
       restored++;
-    } catch (e) {
-      console.error(`restore: failed to add user ${u.id} (tag=${u.inbound_tag}):`, e);
-      failed++;
+    } catch (e: any) {
+      if (typeof e?.details === "string" && e.details.includes("already exists")) {
+        restored++;
+      } else {
+        console.error(`restore: failed to add user ${u.id} (tag=${u.inbound_tag}):`, e);
+        failed++;
+      }
     }
   }
   if (failed > 0) {
