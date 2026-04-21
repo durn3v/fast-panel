@@ -211,25 +211,62 @@ function isUnimplementedGrpcError(e: unknown): boolean {
   );
 }
 
+/** Xray registers online maps as `user>>><email>>>>online` (see app/dispatcher/default.go). */
+const USER_ONLINE_MAP_RE = /^user>>>(?<email>.+)>>>online$/;
+
+/**
+ * Turn a value from GetAllOnlineUsers into the panel user id (= gRPC email).
+ * Xray returns the full map name, not only the UUID.
+ */
+export function normalizeXrayOnlineUserKey(raw: string): string {
+  const s = raw.trim();
+  const m = USER_ONLINE_MAP_RE.exec(s);
+  return m?.groups?.email ?? s;
+}
+
+async function grpcGetAllOnlineUsersRaw(clients: XrayClients): Promise<string[]> {
+  const res = (await promisifyUnary(clients.stats, "getAllOnlineUsers", {})) as {
+    users?: string[];
+    Users?: string[];
+  };
+  return res.users ?? res.Users ?? [];
+}
+
+async function grpcGetUsersStatsEmails(clients: XrayClients): Promise<string[]> {
+  const res = (await promisifyUnary(clients.stats, "getUsersStats", {
+    include_traffic: false,
+    reset: false,
+  })) as { users?: { email?: string; Email?: string }[] };
+  return (res.users ?? [])
+    .map((u) => u.email ?? u.Email)
+    .filter((email): email is string => Boolean(email));
+}
+
 /**
  * User IDs currently considered online by Xray (same strings as gRPC "email" / panel user id).
- * Requires policy `statsUserOnline: true` for the user level in Xray.
- * Uses GetAllOnlineUsers when available, otherwise GetUsersStats (older cores).
+ * Requires `statsUserOnline: true` on the **policy level of the VPN user** (usually `"0"` in
+ * `policy.levels`) in the running `config.json`, plus `"stats": {}` at top level.
+ *
+ * Merges GetAllOnlineUsers (with key normalization) and GetUsersStats so older cores still work.
  */
 export async function grpcGetOnlineUserIds(clients: XrayClients): Promise<string[]> {
+  const ids = new Set<string>();
+
   try {
-    const res = (await promisifyUnary(clients.stats, "getAllOnlineUsers", {})) as {
-      users?: string[];
-    };
-    return res.users ?? [];
+    for (const raw of await grpcGetAllOnlineUsersRaw(clients)) {
+      ids.add(normalizeXrayOnlineUserKey(raw));
+    }
   } catch (e) {
     if (!isUnimplementedGrpcError(e)) throw e;
-    const res = (await promisifyUnary(clients.stats, "getUsersStats", {
-      include_traffic: false,
-      reset: false,
-    })) as { users?: { email?: string }[] };
-    return (res.users ?? [])
-      .map((u) => u.email)
-      .filter((email): email is string => Boolean(email));
   }
+
+  try {
+    for (const email of await grpcGetUsersStatsEmails(clients)) {
+      ids.add(email);
+    }
+  } catch (e) {
+    if (!isUnimplementedGrpcError(e)) throw e;
+  }
+
+  return [...ids];
 }

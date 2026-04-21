@@ -33,11 +33,11 @@ export async function registerInbounds(
         .send({ error: "Xray gRPC unavailable (check XRAY_PROTO_ROOT / API)" });
     }
     try {
-      const [inbounds, onlineIds, panelUsers] = await Promise.all([
+      const [inbounds, panelUsers] = await Promise.all([
         grpcListInbounds(xray),
-        grpcGetOnlineUserIds(xray),
         db.listUsers(),
       ]);
+      const onlineIds = await grpcGetOnlineUserIds(xray);
       const inboundByUserId = new Map(panelUsers.map((u) => [u.id, u.inbound_tag]));
       const countByTag = new Map<string, number>();
       for (const ib of inbounds) {

@@ -61,8 +61,11 @@ paths:
       summary: Online users per inbound
       description: |
         Считает пользователей в статусе online по данным Xray (gRPC), сопоставляя id пользователя панели
-        с инбаундом из БД. В `policy.levels` у inbound-пользователей должен быть включён `statsUserOnline`
-        (см. `config/xray/config.example.json`). Соединения без записи в панели попадают в `unmappedOnlineUsers`.
+        с инбаундом из БД. В **рабочем** `config/xray/config.json` в `policy.levels` для уровня клиентов
+        (как правило `"0"`) нужны `statsUserOnline` (и блок `"stats": {}`), см. `config/xray/config.example.json`.
+        Без `statsUserOnline` Xray не ведёт online — ответ будет нулевым, даже если VPN подключён.
+        Используются только массовые gRPC (`GetAllOnlineUsers`, `GetUsersStats`) — фиксированное число вызовов к Xray, без обхода по каждому пользователю.
+        Соединения без записи в панели попадают в `unmappedOnlineUsers`.
       responses:
         "200":
           description: OK
