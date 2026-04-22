@@ -35,6 +35,65 @@ paths:
       responses:
         "200":
           description: OpenAPI object
+  /status:
+    get:
+      summary: Server and Xray status
+      description: |
+        Загрузка хоста (CPU за короткое окно, память, load average, корневой диск) и доступность Xray API (`listInbounds`).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uptimeSec, server, xray]
+                properties:
+                  uptimeSec:
+                    type: integer
+                    description: Uptime процесса панели в секундах
+                  server:
+                    type: object
+                    required: [cpu, memory, load, disk]
+                    properties:
+                      cpu:
+                        type: object
+                        required: [usagePercent]
+                        properties:
+                          usagePercent:
+                            type: integer
+                            minimum: 0
+                            maximum: 100
+                      memory:
+                        type: object
+                        required: [totalBytes, freeBytes, usedPercent]
+                        properties:
+                          totalBytes: { type: integer }
+                          freeBytes: { type: integer }
+                          usedPercent: { type: integer }
+                      load:
+                        type: object
+                        required: [load1, load5, load15, cores]
+                        properties:
+                          load1: { type: number }
+                          load5: { type: number }
+                          load15: { type: number }
+                          cores: { type: integer }
+                      disk:
+                        type: object
+                        required: [path, totalBytes, freeBytes, usedPercent]
+                        properties:
+                          path: { type: string }
+                          totalBytes: { type: integer }
+                          freeBytes: { type: integer }
+                          usedPercent: { type: integer }
+                  xray:
+                    type: object
+                    required: [connected]
+                    properties:
+                      connected: { type: boolean }
+                      inboundCount: { type: integer }
+                      error: { type: string }
   /inbounds:
     get:
       summary: List inbound tags from running Xray

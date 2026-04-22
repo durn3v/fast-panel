@@ -7,6 +7,7 @@ import YAML from "yaml";
 import { env, requireEnv } from "./config.js";
 import * as db from "./db.js";
 import { registerInbounds } from "./routes/inbounds.js";
+import { registerStatus } from "./routes/status.js";
 import { registerUsers } from "./routes/users.js";
 import { createXrayClients, type XrayClients } from "./services/xrayClient.js";
 import { restoreXrayFromDb } from "./restore.js";
@@ -84,6 +85,7 @@ async function main() {
   });
 
   await registerInbounds(app, xray);
+  await registerStatus(app, xray);
   await registerUsers(app, xray);
 
   if (xray) {
