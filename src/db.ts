@@ -18,6 +18,7 @@ export type UserRow = {
   data_limit: string | null;
   traffic_up: string;
   traffic_down: string;
+  last_seen_at: Date | null;
   created_at: Date;
 };
 
@@ -47,19 +48,19 @@ export async function runMigrations(): Promise<void> {
 export async function listUsers(inboundTag?: string): Promise<UserRow[]> {
   if (inboundTag) {
     return getSql()<UserRow[]>`
-      SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+      SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, last_seen_at, created_at
       FROM users WHERE inbound_tag = ${inboundTag} ORDER BY created_at DESC
     `;
   }
   return getSql()<UserRow[]>`
-    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, last_seen_at, created_at
     FROM users ORDER BY created_at DESC
   `;
 }
 
 export async function getUser(id: string): Promise<UserRow | undefined> {
   const [r] = await getSql()<UserRow[]>`
-    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, last_seen_at, created_at
     FROM users WHERE id = ${id}::uuid
   `;
   return r;
@@ -67,7 +68,7 @@ export async function getUser(id: string): Promise<UserRow | undefined> {
 
 export async function getUserByUuid(uuid: string): Promise<UserRow | undefined> {
   const [r] = await getSql()<UserRow[]>`
-    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, created_at
+    SELECT id, name, uuid, inbound_tag, protocol, flow, enabled, expire_at, data_limit, traffic_up, traffic_down, last_seen_at, created_at
     FROM users WHERE uuid = ${uuid}::uuid
   `;
   return r;
@@ -166,4 +167,16 @@ export async function addTraffic(
 
 export async function setUserDisabled(id: string): Promise<void> {
   await getSql()`UPDATE users SET enabled = false WHERE id = ${id}::uuid`;
+}
+
+export async function touchUsersLastSeen(
+  userIds: readonly string[],
+  seenAt = new Date()
+): Promise<void> {
+  if (userIds.length === 0) return;
+  await getSql()`
+    UPDATE users
+    SET last_seen_at = ${seenAt}
+    WHERE id = ANY(${userIds}::uuid[])
+  `;
 }

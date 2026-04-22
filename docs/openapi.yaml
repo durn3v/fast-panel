@@ -60,12 +60,12 @@ paths:
     get:
       summary: Online users per inbound
       description: |
-        Считает пользователей в статусе online по данным Xray (gRPC), сопоставляя id пользователя панели
-        с инбаундом из БД. В **рабочем** `config/xray/config.json` в `policy.levels` для уровня клиентов
+        Возвращает два счётчика по каждому инбаунду:
+        `onlineUsers` — текущий online по Xray (`GetAllOnlineUsers` / `GetUsersStats`);
+        `activeUsers` — пользователи с трафиком за последнее окно `activeWindowMs` (как в 3x-ui по смыслу).
+        Для `onlineUsers` в **рабочем** `config/xray/config.json` в `policy.levels` для уровня клиентов
         (как правило `"0"`) нужны `statsUserOnline` (и блок `"stats": {}`), см. `config/xray/config.example.json`.
-        Без `statsUserOnline` Xray не ведёт online — ответ будет нулевым, даже если VPN подключён.
-        Используются только массовые gRPC (`GetAllOnlineUsers`, `GetUsersStats`) — фиксированное число вызовов к Xray, без обхода по каждому пользователю.
-        Соединения без записи в панели попадают в `unmappedOnlineUsers`.
+        Если `statsUserOnline` выключен, `onlineUsers` будет 0, но `activeUsers` может быть > 0.
       responses:
         "200":
           description: OK
@@ -73,8 +73,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [inbounds, unmappedOnlineUsers]
+                required: [inbounds, activeWindowMs, unmappedOnlineUsers]
                 properties:
+                  activeWindowMs:
+                    type: integer
+                    description: Размер окна активности для `activeUsers` в миллисекундах
                   unmappedOnlineUsers:
                     type: integer
                     description: Онлайн в Xray, но id не найден среди пользователей панели
@@ -82,13 +85,15 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [tag, protocol, onlineUsers]
+                      required: [tag, protocol, onlineUsers, activeUsers]
                       properties:
                         tag:
                           type: string
                         protocol:
                           type: string
                         onlineUsers:
+                          type: integer
+                        activeUsers:
                           type: integer
         "502":
           description: Xray gRPC error

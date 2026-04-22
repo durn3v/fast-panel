@@ -68,6 +68,17 @@ async function syncOnce(clients: XrayClients): Promise<void> {
     }
   }
 
+  const activeUserIds = [...deltas.entries()]
+    .filter(([, d]) => d.up !== 0n || d.down !== 0n)
+    .map(([userId]) => userId);
+  if (activeUserIds.length > 0) {
+    try {
+      await db.touchUsersLastSeen(activeUserIds, now);
+    } catch (e) {
+      console.error("trafficSync: touchUsersLastSeen failed", e);
+    }
+  }
+
   // Re-fetch to get updated traffic totals after addTraffic calls above.
   const users = await db.listUsers();
   for (const u of users) {

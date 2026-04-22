@@ -14,6 +14,10 @@ export const env = {
   trafficSyncIntervalMs: Number(
     process.env.TRAFFIC_SYNC_INTERVAL_MS ?? 60_000
   ),
+  activeUsersWindowMs: Number(
+    process.env.ACTIVE_USERS_WINDOW_MS ??
+      Number(process.env.TRAFFIC_SYNC_INTERVAL_MS ?? 60_000) * 2
+  ),
   tlsCert: process.env.TLS_CERT ?? "",
   tlsKey: process.env.TLS_KEY ?? "",
 };
