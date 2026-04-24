@@ -37,6 +37,13 @@ services:
       XRAY_API_HOST: xray
       XRAY_API_PORT: "10085"
       XRAY_PROTO_ROOT: /app/xray-core
+      XRAY_CONFIG_PATH: /app/config/xray/config.json
+      XRAY_RELOAD_TYPE: ${XRAY_RELOAD_TYPE:-compose}
+      XRAY_RELOAD_COMPOSE_DIR: /work
+      XRAY_RELOAD_COMPOSE_FILE: ${XRAY_RELOAD_COMPOSE_FILE:-docker-compose.yml:docker-compose.xray-ports.gen.yml}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-super-vpn-panel}
+      XRAY_RELOAD_SCRIPT: ${XRAY_RELOAD_SCRIPT:-}
+      XRAY_RELOAD_WITH_PANEL_COMMAND: ${XRAY_RELOAD_WITH_PANEL_COMMAND:-}
       PORT: "${PORT:-12983}"
       TRAFFIC_SYNC_INTERVAL_MS: ${TRAFFIC_SYNC_INTERVAL_MS:-60000}
       TLS_CERT: ${TLS_CERT:-}
@@ -45,6 +52,9 @@ services:
       - "${PORT:-12983}:${PORT:-12983}"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./config/xray:/app/config/xray:rw
+      - ./:/work:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       postgres:
         condition: service_healthy

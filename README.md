@@ -102,6 +102,7 @@ curl -fsSL https://raw.githubusercontent.com/durn3v/fast-panel/main/scripts/unin
 - Спека: [docs/openapi.yaml](docs/openapi.yaml) — также `GET /openapi.yaml` и `GET /openapi.json` (без ключа).
 - **`GET /users` / `GET /users/:id`** отдают `uuid` (VLESS id) и `inboundTag` — по ним и вашему `config.json` собирайте `vless://` на своей стороне.
 - **`GET /inbounds`** — теги inbounds из **запущенного** Xray (gRPC `ListInbounds`), не из БД.
+- **`GET` / `PUT /xray/config`**, **`POST /xray/reload`** — правка `config.json` на диске и перезагрузка Xray (см. [docs/openapi.yaml](docs/openapi.yaml), переменные `XRAY_CONFIG_PATH`, `XRAY_RELOAD_*` в `.env.example`).
 
 ### Про protobuf и «inboundBuilder»
 

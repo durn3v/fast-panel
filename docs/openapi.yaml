@@ -35,6 +35,100 @@ paths:
       responses:
         "200":
           description: OpenAPI object
+  /xray/config:
+    get:
+      summary: Get Xray config.json (same file as inbounds; read from disk)
+      description: |
+        Путь: `XRAY_CONFIG_PATH` (в Docker с типовым compose — `/app/config/xray/config.json` при монтировании `config/xray`).
+        С `?raw=1` тело ответа — сырой текст файла.
+      parameters:
+        - name: raw
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["1", "true"]
+      responses:
+        "200":
+          description: JSON object
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Файл не найден
+        "500":
+          description: Не удалось прочитать или распарсить
+    put:
+      summary: Replace Xray config.json
+      description: |
+        Тело — полный JSON-объект (корневой объект, не массив). Запись атомарная. После правок вызовите `POST /xray/reload`.
+        Для смены портов inbounds по-прежнему нужен `scripts/run-gen-xray-ports.sh` / `vpn-panel start` (генерация `docker-compose.xray-ports.gen.yml`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, path]
+                properties:
+                  ok: { const: true }
+                  path: { type: string }
+        "400":
+          description: Не объект или невалидный JSON
+        "415":
+          description: Content-Type не JSON
+        "500":
+          description: Ошибка записи
+  /xray/reload:
+    post:
+      summary: Перезагрузить Xray (тот же смысл, что `scripts/vpn-panel xray-restart` / `reload-xray`)
+      description: |
+        Поведение задаётся окружением:
+        - `XRAY_RELOAD_TYPE=compose` — `docker compose exec` в сервис `xray` (и опционально `docker compose restart panel` при `mode=withPanel`), как в `scripts/vpn-panel`. Нужны `XRAY_RELOAD_COMPOSE_DIR`, `COMPOSE_PROJECT_NAME`, compose-файлы, Docker socket с хоста.
+        - `XRAY_RELOAD_TYPE=script` — `sh -c` для `XRAY_RELOAD_SCRIPT` (только xray) или `XRAY_RELOAD_WITH_PANEL_COMMAND` (при `withPanel`, аналог `reload-xray`).
+        - `XRAY_RELOAD_TYPE=none` — эндпоинт отвечает 503.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [xray, withPanel]
+                  default: xray
+      parameters:
+        - name: mode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [xray, withPanel]
+            default: xray
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, mode]
+                properties:
+                  ok: { const: true }
+                  mode: { type: string }
+                  output: { type: string, description: "stdout+stderr внешних команд" }
+        "502":
+          description: Команда перезагрузки завершилась с ошибкой
+        "503":
+          description: Перезагрузка не настроена или нет обязательных env
   /status:
     get:
       summary: Server and Xray status
