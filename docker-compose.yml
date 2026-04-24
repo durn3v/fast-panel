@@ -20,6 +20,8 @@ services:
   xray:
     image: teddysun/xray:latest
     restart: always
+    # Не /usr/bin/xray как PID1: см. config/xray/xray-supervisor.sh и «vpn-panel xray-restart».
+    entrypoint: ["/bin/sh", "/etc/xray/xray-supervisor.sh"]
     volumes:
       - ./config/xray:/etc/xray
     # ports: см. docker-compose.xray-ports.gen.yml (генерируется из inbounds в config/xray/config.json)

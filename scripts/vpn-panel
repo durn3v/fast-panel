@@ -52,6 +52,26 @@ ensure_ports() {
   bash "$ROOT/scripts/run-gen-xray-ports.sh"
 }
 
+# Быстрый перезапуск только процесса xray (тот же контейнер), чтобы подтянуть config.json.
+# С xray-supervisor.sh: SIGTERM дочернему xray. Старый режим (xray = PID1):
+# SIGTERM PID1 ≈ тому же, что и docker restart xray.
+xray_process_restart() {
+  if ! dc ps -q xray | grep -q .; then
+    echo "vpn-panel: контейнер xray не запущен" >&2
+    return 1
+  fi
+  if dc exec -T xray sh -c \
+    'if [ -f /var/run/xray-child.pid ]; then
+       pid=$(cat /var/run/xray-child.pid 2>/dev/null) || true
+       if [ -n "$pid" ] && [ -d "/proc/$pid" ] && kill -TERM "$pid" 2>/dev/null; then exit 0; fi
+     fi
+     kill -TERM 1' 2>/dev/null; then
+    return 0
+  fi
+  echo "vpn-panel: «xray-restart» через exec не удался, делаю docker restart xray…" >&2
+  dc restart xray
+}
+
 # Как на типичном сервере: без «локальных» отличий от origin (chmod/правки не блокируют обновление).
 sync_repo_from_origin() {
   local branch
@@ -83,8 +103,12 @@ case "$cmd" in
     ensure_ports
     dc restart
     ;;
+  xray-restart)
+    xray_process_restart
+    ;;
   reload-xray)
-    dc restart xray
+    # Как раньше: xray (быстрый путь — xray-restart) + рестарт панели
+    xray_process_restart
     dc restart panel
     ;;
   update)
@@ -124,7 +148,7 @@ case "$cmd" in
       -c "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE enabled) AS enabled FROM users;"
     ;;
   *)
-    echo "Usage: $0 {start|stop|restart|reload-xray|update|xray-status|xray-logs [N]|users-stats}" >&2
+    echo "Usage: $0 {start|stop|restart|xray-restart|reload-xray|update|xray-status|xray-logs [N]|users-stats}" >&2
     exit 1
     ;;
 esac
