@@ -132,6 +132,14 @@ npm run dev
 
 `install.sh` выпускает сертификат через **certbot standalone** (HTTP-01 challenge на порту 80) и создаёт deploy hook `/etc/letsencrypt/renewal-hooks/deploy/restart-vpn-panel.sh`, который перезапускает контейнер `panel` после авто-обновления сертификата.
 
+Отдельно, в любой момент после появления `.env` в каталоге установки:
+
+```bash
+sudo vpn-panel issue-tls panel.example.com
+```
+
+Нужны **свободный порт 80** на сервере и **DNS** (A/AAAA) домена на этот хост. Скрипт ставит `certbot` при отсутствии, выпускает или переиспользует сертификат и прописывает `TLS_CERT` / `TLS_KEY` в `.env`, затем выполните `vpn-panel restart`.
+
 ## Environment
 
 См. [.env.example](.env.example). В Docker `docker-compose.yml` подставляет `POSTGRES_PASSWORD`, `API_KEY`, `TLS_CERT`, `TLS_KEY` и `PORT` из `.env`.

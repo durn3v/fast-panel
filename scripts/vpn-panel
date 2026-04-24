@@ -24,7 +24,11 @@ cd "$ROOT"
 
 # После «git reset --hard» Git может восстановить режим 100644 — без +x будет Permission denied.
 ensure_exec_bits() {
-  chmod +x "$ROOT/scripts/vpn-panel" "$ROOT/scripts/run-gen-xray-ports.sh" 2>/dev/null || true
+  chmod +x \
+    "$ROOT/scripts/vpn-panel" \
+    "$ROOT/scripts/run-gen-xray-ports.sh" \
+    "$ROOT/scripts/issue-tls-cert.sh" \
+    2>/dev/null || true
 }
 ensure_exec_bits
 
@@ -130,6 +134,18 @@ case "$cmd" in
     fi
     dc logs --tail="$lines" xray
     ;;
+  issue-tls)
+    dom="${2:-}"
+    if [[ -z "$dom" ]]; then
+      echo "vpn-panel issue-tls: укажите FQDN, например: vpn-panel issue-tls panel.example.com" >&2
+      exit 1
+    fi
+    if [[ "${EUID:-0}" -eq 0 ]]; then
+      bash "$ROOT/scripts/issue-tls-cert.sh" "$dom"
+    else
+      exec sudo bash "$ROOT/scripts/issue-tls-cert.sh" "$dom"
+    fi
+    ;;
   users-stats)
     if [[ ! -f "$ROOT/.env" ]]; then
       echo "vpn-panel users-stats: нет $ROOT/.env" >&2
@@ -148,7 +164,7 @@ case "$cmd" in
       -c "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE enabled) AS enabled FROM users;"
     ;;
   *)
-    echo "Usage: $0 {start|stop|restart|xray-restart|reload-xray|update|xray-status|xray-logs [N]|users-stats}" >&2
+    echo "Usage: $0 {start|stop|restart|xray-restart|reload-xray|update|xray-status|xray-logs [N]|issue-tls <fqdn>|users-stats}" >&2
     exit 1
     ;;
 esac
