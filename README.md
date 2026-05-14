@@ -8,7 +8,7 @@ REST API для учёта пользователей **VLESS** на [Xray](http
 
 Репозиторий: [github.com/durn3v/fast-panel](https://github.com/durn3v/fast-panel).
 
-Скрипт **`scripts/install.sh`** рассчитан **только на Ubuntu 24.x / 25.x** (сервер): ставит через `apt` зависимости и при необходимости **Docker** (`get.docker.com`), затем клонирует репозиторий и готовит `.env` / `config.json`. Каталог по умолчанию: **`/opt/fast-panel`** (переопределение: переменная **`INSTALL_DIR`**).
+Скрипт **`scripts/install.sh`** рассчитан **только на Ubuntu 24.x / 25.x / 26.x** (сервер): ставит через `apt` зависимости и при необходимости **Docker** (`get.docker.com`), затем клонирует репозиторий и готовит `.env` / `config.json`. Каталог по умолчанию: **`/opt/fast-panel`** (переопределение: переменная **`INSTALL_DIR`**).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/durn3v/fast-panel/main/scripts/install.sh | sudo bash

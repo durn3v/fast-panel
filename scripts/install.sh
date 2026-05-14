@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Установка панели: только Ubuntu 24.04+ / 25.x (server).
+# Установка панели: только Ubuntu 24.04+ / 25.x / 26.x (server).
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/durn3v/fast-panel.git}"
@@ -24,8 +24,8 @@ if [[ "${ID:-}" != "ubuntu" ]]; then
 fi
 
 UBUNTU_MAJOR="${VERSION_ID%%.*}"
-if [[ "$UBUNTU_MAJOR" != "24" && "$UBUNTU_MAJOR" != "25" ]]; then
-  echo "Этот установщик поддерживает только Ubuntu 24.x и 25.x. Сейчас: VERSION_ID=${VERSION_ID:-?}" >&2
+if [[ "$UBUNTU_MAJOR" != "24" && "$UBUNTU_MAJOR" != "25" && "$UBUNTU_MAJOR" != "26" ]]; then
+  echo "Этот установщик поддерживает только Ubuntu 24.x, 25.x и 26.x. Сейчас: VERSION_ID=${VERSION_ID:-?}" >&2
   exit 1
 fi
 
