@@ -141,6 +141,28 @@ sudo vpn-panel issue-tls panel.example.com
 
 Нужны **свободный порт 80** на сервере и **DNS** (A/AAAA) домена на этот хост. Скрипт ставит `certbot` при отсутствии, выпускает или переиспользует сертификат и прописывает `TLS_CERT` / `TLS_KEY` в `.env`, затем выполните `vpn-panel restart`.
 
+## TLS для Xray (VLESS + TLS)
+
+Контейнер **xray** монтирует `/etc/letsencrypt` с хоста (read-only). В `config/xray/config.json` указывайте пути **внутри контейнера** — те же, что на сервере, например `/etc/letsencrypt/live/vpn.example.com/fullchain.pem`.
+
+Пример inbound: [config/xray/inbound.vless-tls.example.json](config/xray/inbound.vless-tls.example.json). Скопируйте объект в массив `inbounds`, замените `vpn.example.com` на ваш домен и `tag` при необходимости. Пользователей (`clients`) панель добавляет через gRPC — массив можно оставить пустым.
+
+Для VPN часто нужен **отдельный домен** (не домен панели):
+
+```bash
+sudo certbot certonly --standalone -d vpn.example.com
+sudo vpn-panel start   # перегенерирует порты из config.json
+sudo vpn-panel xray-restart
+```
+
+Проверка, что сертификаты видны в контейнере:
+
+```bash
+docker compose exec xray ls -la /etc/letsencrypt/live/vpn.example.com/
+```
+
+Deploy hook certbot после renew перезапускает **xray** (`vpn-panel xray-restart`) и **panel** (`docker compose restart panel`).
+
 ## Environment
 
 См. [.env.example](.env.example). В Docker `docker-compose.yml` подставляет `POSTGRES_PASSWORD`, `API_KEY`, `TLS_CERT`, `TLS_KEY` и `PORT` из `.env`.

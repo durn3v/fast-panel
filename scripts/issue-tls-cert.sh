@@ -67,7 +67,8 @@ fi
 HOOK_FILE="/etc/letsencrypt/renewal-hooks/deploy/restart-vpn-panel.sh"
 cat >"$HOOK_FILE" <<HOOK
 #!/bin/bash
-# Автоматически перезапускает контейнер panel после обновления сертификата
+# После обновления сертификата: Xray подхватывает новые файлы с тома, panel — при рестарте контейнера
+cd "${ROOT}" && bash scripts/vpn-panel xray-restart 2>/dev/null || true
 cd "${ROOT}" && docker compose restart panel 2>/dev/null || true
 HOOK
 chmod +x "$HOOK_FILE"

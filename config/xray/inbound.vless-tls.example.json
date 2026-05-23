@@ -1,0 +1,21 @@
+{
+  "tag": "vless-tls",
+  "port": 443,
+  "protocol": "vless",
+  "settings": {
+    "clients": [],
+    "decryption": "none"
+  },
+  "streamSettings": {
+    "network": "tcp",
+    "security": "tls",
+    "tlsSettings": {
+      "certificates": [
+        {
+          "certificateFile": "/etc/letsencrypt/live/vpn.example.com/fullchain.pem",
+          "keyFile": "/etc/letsencrypt/live/vpn.example.com/privkey.pem"
+        }
+      ]
+    }
+  }
+}
