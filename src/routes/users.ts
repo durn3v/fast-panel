@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
+import { env } from "../config.js";
 import * as db from "../db.js";
 import { userToApi } from "../serialize.js";
+import { resolveDefaultVlessFlow } from "../services/inboundFlow.js";
 import type { XrayClients } from "../services/xrayClient.js";
 import {
   grpcAddUser,
@@ -88,11 +90,15 @@ export async function registerUsers(
       dataLimit = parsed.value;
     }
 
-    // flow only applies to vless; default to xtls-rprx-vision when not specified
-    const flow =
-      protocol === "vless"
-        ? (req.body.flow !== undefined ? req.body.flow : "xtls-rprx-vision")
-        : null;
+    // flow only applies to vless; default from inbound streamSettings.security in config.json
+    let flow: string | null = null;
+    if (protocol === "vless") {
+      if (req.body.flow !== undefined) {
+        flow = req.body.flow ?? "";
+      } else {
+        flow = await resolveDefaultVlessFlow(env.xrayConfigPath, inboundTag);
+      }
+    }
 
     const enabled = req.body.enabled !== false;
 
@@ -178,7 +184,14 @@ export async function registerUsers(
 
     if (enablingUser) {
       try {
-        await grpcAddUser(xray!, u.inbound_tag, u.id, u.uuid);
+        await grpcAddUser(
+          xray!,
+          u.inbound_tag,
+          u.id,
+          u.uuid,
+          u.protocol,
+          u.flow
+        );
       } catch (e) {
         console.error("xray AddUser (re-enable) failed:", e);
         return reply.status(502).send({ error: "xray AddUser failed" });

@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "../config.js";
 import * as db from "../db.js";
+import { resolveDefaultVlessFlow } from "../services/inboundFlow.js";
 import type { XrayClients } from "../services/xrayClient.js";
 import {
   grpcGetOnlineUserIds,
-  grpcListInboundTags,
   grpcListInbounds,
 } from "../services/xrayClient.js";
 
@@ -19,8 +19,17 @@ export async function registerInbounds(
         .send({ error: "Xray gRPC unavailable (check XRAY_PROTO_ROOT / API)" });
     }
     try {
-      const tags = await grpcListInboundTags(xray);
-      return tags.map((tag) => ({ tag }));
+      const inbounds = await grpcListInbounds(xray);
+      return Promise.all(
+        inbounds.map(async (ib) => ({
+          tag: ib.tag,
+          protocol: ib.protocol,
+          defaultVlessFlow:
+            ib.protocol === "vless"
+              ? await resolveDefaultVlessFlow(env.xrayConfigPath, ib.tag)
+              : null,
+        }))
+      );
     } catch (e) {
       console.error("xray ListInbounds failed:", e);
       return reply.status(502).send({ error: "xray ListInbounds failed" });

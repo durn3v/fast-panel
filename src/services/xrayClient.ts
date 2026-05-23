@@ -130,7 +130,7 @@ export async function grpcAddUser(
   email: string,
   uuid: string,
   protocol = "vless",
-  flow: string | null = "xtls-rprx-vision"
+  flow: string | null = null
 ): Promise<void> {
   const root = clients.root;
   const accountTm = buildAccountTypedMessage(root, protocol, uuid, flow);
