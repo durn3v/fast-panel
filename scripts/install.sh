@@ -140,7 +140,6 @@ DATABASE_URL=postgres://vpn:${PG_PASS}@postgres:5432/vpn
 XRAY_API_HOST=xray
 XRAY_API_PORT=10085
 XRAY_PROTO_ROOT=/app/xray-core
-XRAY_CONFIG_PATH=/app/config/xray/config.json
 XRAY_RELOAD_TYPE=compose
 COMPOSE_PROJECT_NAME=$(basename "$INSTALL_DIR")
 PORT=${PANEL_PORT}

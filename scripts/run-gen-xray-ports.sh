@@ -24,7 +24,6 @@ if docker info >/dev/null 2>&1; then
   exec docker run --rm \
     -v "$ROOT:/work" \
     -w /work \
-    -e XRAY_CONFIG_PATH \
     "$GEN_NODE_IMAGE" \
     node scripts/gen-xray-ports-compose.mjs
 fi

@@ -3,11 +3,12 @@
  * Собирает TCP-порты из inbounds в конфиге Xray и пишет docker-compose.xray-ports.gen.yml
  * (мерджится с базовым compose через COMPOSE_FILE в scripts/vpn-panel).
  *
- * Путь к JSON: XRAY_CONFIG_PATH (от корня репо) или по умолчанию config/xray/config.json.
+ * Путь к JSON: XRAY_CONFIG_PATH (относительно корня репо) или config/xray/config.json.
+ * Значения /app/... и /work/... (Docker) приводятся к пути в каталоге репозитория.
  * Поле `api.port` не публикуем — только inbounds (как клиентские входы).
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -123,9 +124,28 @@ function collectInboundTcpPorts(cfg) {
   return [...set].sort((a, b) => a - b);
 }
 
+const DEFAULT_CONFIG_REL = "config/xray/config.json";
+
+/** @param {Record<string, string>} env */
+function resolveXrayConfigPath(env) {
+  const raw = (env.XRAY_CONFIG_PATH ?? DEFAULT_CONFIG_REL).trim() || DEFAULT_CONFIG_REL;
+
+  if (raw.startsWith("/app/") || raw.startsWith("/work/")) {
+    const rel = raw.replace(/^\/(?:app|work)\//, "");
+    return { rel, path: join(root, rel) };
+  }
+  if (isAbsolute(raw)) {
+    if (raw.endsWith(DEFAULT_CONFIG_REL)) {
+      return { rel: DEFAULT_CONFIG_REL, path: join(root, DEFAULT_CONFIG_REL) };
+    }
+    return { rel: raw, path: raw };
+  }
+  const rel = raw.replace(/^\.\//, "");
+  return { rel, path: join(root, rel) };
+}
+
 const merged = { ...loadDotEnv(), ...process.env };
-const configRel = merged.XRAY_CONFIG_PATH ?? "config/xray/config.json";
-const configPath = join(root, configRel);
+const { rel: configRel, path: configPath } = resolveXrayConfigPath(merged);
 
 let ports = [];
 if (!existsSync(configPath)) {
