@@ -21,10 +21,11 @@ ARG DOCKER_VER=27.4.1
 ARG COMPOSE_VER=2.32.4
 RUN rm -rf /var/lib/apt/lists/* \
   && apt-get update && apt-get install -y --no-install-recommends ca-certificates git curl \
-  && case "${TARGETARCH}" in \
-    amd64) d="x86_64";; \
-    arm64) d="aarch64";; \
-    *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
+  && arch="${TARGETARCH:-$(dpkg --print-architecture 2>/dev/null || uname -m)}" \
+  && case "${arch}" in \
+    amd64|x86_64) d="x86_64";; \
+    arm64|aarch64) d="aarch64";; \
+    *) echo "unsupported architecture: ${arch}" >&2; exit 1;; \
   esac; \
   curl -fsSL "https://download.docker.com/linux/static/stable/${d}/docker-${DOCKER_VER}.tgz" | tar -xz; \
   mv docker/docker /usr/local/bin/docker; \
